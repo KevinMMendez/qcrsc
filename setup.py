@@ -23,7 +23,7 @@ setup(
         "numpy",
         "pandas",
         "scipy",
-        "sklearn",
+        "scikit-learn",
         "tqdm",
         "openpyxl"],
     author='Kevin Mendez, David Broadhurst',
