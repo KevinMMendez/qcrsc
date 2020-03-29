@@ -24,7 +24,6 @@ setup(
         "pandas",
         "scipy",
         "sklearn",
-        "smooth,
         "tqdm",
         "openpyxl"],
     author='Kevin Mendez, David Broadhurst',
