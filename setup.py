@@ -14,7 +14,7 @@ setup(
     long_description_content_type='text/markdown',
     license="MIT License",
     url="https://github.com/kevinmmendez/qcrsc",
-    packages=["smooth"],
+    packages=["qcrsc"],
     python_requires='>=3.5',
     install_requires=[
         "bokeh",
@@ -24,6 +24,7 @@ setup(
         "pandas",
         "scipy",
         "sklearn",
+        "smooth,
         "tqdm",
         "openpyxl"],
     author='Kevin Mendez, David Broadhurst',
