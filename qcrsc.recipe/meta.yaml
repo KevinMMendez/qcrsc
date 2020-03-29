@@ -1,0 +1,42 @@
+package:
+  name: qcrsc
+  version: 0.1.0
+
+source:
+  path: ../
+
+build:
+  noarch: python
+  number: 0
+  script: "{{ PYTHON }} -m pip install . --no-deps -vv"
+
+requirements:
+  build:
+    - setuptools
+    - python >=3.5
+    - bokeh
+    - joblib
+    - matplotlib
+    - numpy
+    - pandas
+    - scipy
+    - sklearn
+    - tqdm
+    - openpyxl
+
+  run:
+    - python >=3.5
+    - bokeh
+    - joblib
+    - matplotlib
+    - numpy
+    - pandas
+    - scipy
+    - sklearn
+    - tqdm
+    - openpyxl
+
+about:
+  home: https://github.com/kevinmmendez
+  license: MIT License
+  summary: "Quality control-robust spline correction"
