@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import LeaveOneOut
-from smooth import CubicSmoothSpline
+from .csaps import CubicSmoothSpline
 
 
 def QCRSC(x, t, qc, gamma_range, remove_outliers=True, remove_batch=True):
@@ -56,8 +56,12 @@ def QCRSC(x, t, qc, gamma_range, remove_outliers=True, remove_batch=True):
 
     cvMse = np.array(cvMse)
     min_cvMse = np.argmin(cvMse)
-    gamma = gamma_range[min_cvMse]
+
+    if type_fit == 'cubic':
+        gamma = gamma_range[min_cvMse]
+
     p = 1 / (1 + epsilon * 10 ** (gamma))
+
     try:
         csaps = CubicSmoothSpline(p=p)
         csaps.fit(Tqc, Xqc)

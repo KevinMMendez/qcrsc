@@ -45,8 +45,7 @@ def batch_align(DataTables, PeakTables, transform='log', parametric=True, QC='QC
 
         Xqcb = DataTable.QCB
         Xqc_between = X[Xqcb == 1]
-        MPA = np.median(Xqc_between)  # Calc MPA using QCB
-
+        MPA = np.nanmedian(Xqc_between, axis=0)  # Calc MPA using QCB
         X = X - np.array(MPA)
 
         for j in peak_list:

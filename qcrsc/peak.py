@@ -503,7 +503,7 @@ def peak_singlebatch(DataTable, PeakTable, batch='all', peak='M1', gamma=False, 
             if qct_check == False:
                 text_label.append('RSD: {0:.2f}'.format(Before_RSD_within))
                 text_label.append('D-Ratio: {0:.2f}'.format(Before_Dratio_within))
-                text_label.append('Blank%Mean: {0:.2f}'.format(Before_Blank))
+                text_label.append('Blank%Mean: {0:.2f}'.format(Before_Blank_within))
             else:
                 text_label.append('RSD Train: {0:.2f}'.format(Before_RSD_within))
                 text_label.append('RSD Test: {0:.2f}'.format(Before_RSD_test))
@@ -611,7 +611,7 @@ def peak_singlebatch(DataTable, PeakTable, batch='all', peak='M1', gamma=False, 
     show(fig)
 
 
-def peak_multibatch(DataTable, PeakTable, batch='all', peak='M1', gamma=False, transform='log', parametric=True, zero_remove=True, plot='all', control_limit=False, colormap='Set1', scale_x=1, scale_y=1, fill_points=True):
+def peak_multibatch(DataTable, PeakTable, batch='all', peak='M1', gamma=False, transform='log', parametric=True, zero_remove=True, plot=['Sample', 'QC'], control_limit=False, colormap='Set1', fill_points=True, scale_x=1, scale_y=1):
 
     if gamma != False:
         gamma_range = [x / 100.0 for x in range(int(gamma[0] * 100), int(gamma[1] * 100), int(gamma[2] * 100))]
@@ -645,7 +645,7 @@ def peak_multibatch(DataTable, PeakTable, batch='all', peak='M1', gamma=False, t
     Before_RSD_within, Before_Dratio_within, Before_Blank_within = calc_rsd_dratio_blank(x, qcw, sam, blank, transform, parametric)
     Before_RSD_between, Before_Dratio_between, Before_Blank_between = calc_rsd_dratio_blank(x, qcb, sam, blank, transform, parametric)
     Before_RSD_test, Before_Dratio_test, Before_Blank_test = calc_rsd_dratio_blank(x, qct, sam, blank, transform, parametric)
-    mpa_mean = np.nanmean(x[qcb == True])  # Need to edit
+    mpa_mean = np.nanmedian(x[qcb == True])  # Need to edit
 
     # perform the QCRSC (if gamma != False)
     if gamma != False:
@@ -662,26 +662,23 @@ def peak_multibatch(DataTable, PeakTable, batch='all', peak='M1', gamma=False, t
             qcw_i = qcw[batch_i]
             qcb_i = qcb[batch_i]
             z_i, f_i, curvetype_i, cvMse_i, gamma_optimal_i, mpa_median_i = QCRSC(x_i, t_i, qcw_i, gamma_range)
+            mpa_median_i = np.nanmedian(z_i.values[qcb_i == 1])
             z_i = z_i - mpa_median_i  # align z
             z.append(z_i)
             f.append(f_i)
             curvetype.append(curvetype_i)
             cvMse.append(cvMse_i)
             gamma_optimal.append(gamma_optimal_i)
-            mpa_median_i = np.nanmean(x_i.values[qcb_i])
             mpa_median.append(mpa_median_i)
         z = np.array(np.concatenate(z, axis=0))
-        z = z + np.nanmean(mpa_median)
+        z = z + np.nanmedian(mpa_median)
         f = np.array(np.concatenate(f, axis=0))
+
+        mpa_mean = np.nanmedian(mpa_median)  # Need to edit
 
         After_RSD_within, After_Dratio_within, After_Blank_within = calc_rsd_dratio_blank(z, qcw, sam, blank, transform, parametric)
         After_RSD_between, After_Dratio_between, After_Blank_between = calc_rsd_dratio_blank(z, qcb, sam, blank, transform, parametric)
         After_RSD_test, After_Dratio_test, After_Blank_test = calc_rsd_dratio_blank(z, qct, sam, blank, transform, parametric)
-
-        z_save = z  # save a copy
-
-    x_save = x  # save a copy
-    t_save = t  # save a copy
 
     # Select what to plot (based on plot)
     plot_binary = BatchTable['SampleType'].isin(plot)
@@ -764,11 +761,11 @@ def peak_multibatch(DataTable, PeakTable, batch='all', peak='M1', gamma=False, t
         for i in control_limit:
             for j in batch:
                 batch_j = np.where(batch_list == j, True, False)
-                t_j = t_save.values[batch_j]
-                x_j = x_save.values[batch_j]
-                qcw_j = qcw.values[batch_j]
+                x_j = x.values[batch_j]
+                qcb_j = qcb.values[batch_j]
                 sam_j = sam.values[batch_j]
-                low, upp = control_limits(x_j, qcw_j, sam_j, i, control_limit[i], transform)
+                t_j = t.values[batch_j]
+                low, upp = control_limits(x_j, qcb_j, sam_j, i, control_limit[i], transform)
                 before_cl_low = [low] * len(t_j)
                 before_cl_upp = [upp] * len(t_j)
                 if i == 'RSD':
@@ -783,15 +780,8 @@ def peak_multibatch(DataTable, PeakTable, batch='all', peak='M1', gamma=False, t
         grid[0, 1].x(t.values, f, line_width=2, fill_color=None, line_color='black')
         grid[0, 1].line(t.values, f, line_width=2, line_dash="dashed", line_color='black')
     else:
-        # Create a line per batch
-        for i in batch:
-            batch_i = np.where(batch_list == i, True, False)
-            t_i = t_save.values[batch_i]
-            x_i = x_save.values[batch_i]
-            qcw_i = qcw.values[batch_i]
-            xqc_mean_i = np.nanmean(x_i[qcw_i == 1])
-            xqc_mean_list_i = np.ones(len(x_i)) * xqc_mean_i
-            grid[0, 1].line(t_i, xqc_mean_list_i, line_width=2, line_dash="dashed", line_color='black')
+        x_qc_mean_list = np.ones(len(t)) * mpa_mean
+        grid[0, 1].line(t.values, x_qc_mean_list, line_width=2, line_dash="dashed", line_color='black')
 
     # Before: Plot Samples
     if 'Sample' in sampletype.values:
@@ -864,7 +854,7 @@ def peak_multibatch(DataTable, PeakTable, batch='all', peak='M1', gamma=False, t
                 ("Type", "@label"),
                 ("Order", "@Name"), ],))
 
-     # After and cvMSE plot (if gamma != False)
+    # After and cvMSE plot (if gamma != False)
     if gamma != False:
         # After correction plot
         grid[1, 1] = figure(title="After Correction: {}-{}".format(PeakTable.Name[index], PeakTable.Label[index]), plot_width=right_width, plot_height=height, x_axis_label='Order', y_axis_label=y_label)
@@ -875,31 +865,19 @@ def peak_multibatch(DataTable, PeakTable, batch='all', peak='M1', gamma=False, t
         # After: Add control limit
         if control_limit != False:
             for i in control_limit:
-                for j in batch:
-                    batch_j = np.where(batch_list == j, True, False)
-                    t_j = t_save.values[batch_j]
-                    z_j = z_save[batch_j]
-                    qcw_j = qcw.values[batch_j]
-                    sam_j = sam.values[batch_j]
-                    low, upp = control_limits(z_j, qcw_j, sam_j, i, control_limit[i], transform)
-                    before_cl_low = [low] * len(t_j)
-                    before_cl_upp = [upp] * len(t_j)
-                    if i == 'RSD':
-                        before_cl_dash = "dashed"
-                    else:
-                        before_cl_dash = "dotdash"
-                    grid[1, 1].line(x=t_j, y=before_cl_low, line_dash=before_cl_dash, line_width=2, line_color='darkblue')
-                    grid[1, 1].line(x=t_j, y=before_cl_upp, line_dash=before_cl_dash, line_width=2, line_color='darkblue')
+                low, upp = control_limits(z, qcb, sam, i, control_limit[i], transform)
+                before_cl_low = [low] * len(t)
+                before_cl_upp = [upp] * len(t)
+                if i == 'RSD':
+                    before_cl_dash = "dashed"
+                else:
+                    before_cl_dash = "dotdash"
+                grid[1, 1].line(x=t.values, y=before_cl_low, line_dash=before_cl_dash, line_width=2, line_color='darkblue')
+                grid[1, 1].line(x=t.values, y=before_cl_upp, line_dash=before_cl_dash, line_width=2, line_color='darkblue')
 
-        # After: Plot line (dash) (Create a line per batch)
-        for i in batch:
-            batch_i = np.where(batch_list == i, True, False)
-            t_i = t_save.values[batch_i]
-            z_i = z_save[batch_i]
-            qcw_i = qcw.values[batch_i]
-            zqc_mean_i = np.nanmean(z_i[qcw_i == 1])
-            zqc_mean_list_i = np.ones(len(z_i)) * zqc_mean_i
-            grid[1, 1].line(t_i, zqc_mean_list_i, line_width=2, line_dash="dashed", line_color='black')
+        # After: Plot line (dash)
+        x_qc_mean_list = np.ones(len(t)) * mpa_mean
+        grid[1, 1].line(t.values, x_qc_mean_list, line_width=2, line_dash="dashed", line_color='black')
 
         # After: Plot Samples
         if 'Sample' in sampletype.values:
@@ -978,10 +956,10 @@ def peak_multibatch(DataTable, PeakTable, batch='all', peak='M1', gamma=False, t
         grid[1, 0].xgrid.visible = False
         grid[1, 0].title.text_font_size = '14pt'
 
+        # cvMSE: Per Batch
         for i in range(len(cvMse)):
             # cvMSE: Get color
-            batch_i = batch[i]
-            b_rgb = colmap([batch_i])
+            b_rgb = colmap([batch[i]])
             b_hex = matplotlib.colors.rgb2hex(b_rgb[0])
 
             # cvMSE: Get optimal
@@ -992,7 +970,7 @@ def peak_multibatch(DataTable, PeakTable, batch='all', peak='M1', gamma=False, t
             # cvMSE: Plot circles and lines
             source_cvMSE = ColumnDataSource(dict(x=gamma_range, y=cvMse[i]))
             grid[1, 0].line(x="x", y="y", line_color="grey", line_width=1, source=source_cvMSE)
-            glyph_cvMSE_circle = grid[1, 0].circle(x="x", y="y", fill_color=b_hex, line_color="grey", fill_alpha=1, size=5, source=source_cvMSE)
+            glyph_cvMSE_circle = grid[1, 0].circle(x="x", y="y", fill_color=b_hex, line_color="grey", fill_alpha=0.9, size=5, source=source_cvMSE)
 
             # cvMSE: Add HoverTool
             grid[1, 0].add_tools(HoverTool(
@@ -1011,7 +989,7 @@ def peak_multibatch(DataTable, PeakTable, batch='all', peak='M1', gamma=False, t
 
     # Text box: labels
     text_label = []
-    text_label.append('Batch: {}'.format(batch))
+    text_label.append('Batch: {}'.format(batch[0]))
     text_label.append('Name: {}'.format(PeakTable.Name[index]))
     text_label.append('Label: {}'.format(PeakTable.Label[index]))
     if transform is 'log':
@@ -1023,7 +1001,7 @@ def peak_multibatch(DataTable, PeakTable, batch='all', peak='M1', gamma=False, t
             if qct_check == False:
                 text_label.append('RSD: {0:.2f}'.format(Before_RSD_within))
                 text_label.append('D-Ratio: {0:.2f}'.format(Before_Dratio_within))
-                text_label.append('Blank%Mean: {0:.2f}'.format(Before_Blank))
+                text_label.append('Blank%Mean: {0:.2f}'.format(Before_Blank_within))
             else:
                 text_label.append('RSD Train: {0:.2f}'.format(Before_RSD_within))
                 text_label.append('RSD Test: {0:.2f}'.format(Before_RSD_test))

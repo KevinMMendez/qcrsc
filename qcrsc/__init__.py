@@ -7,6 +7,7 @@ from .export_dataXL import export_dataXL
 from .load_dataXL import load_dataXL
 from .batch import batch
 from .batch_align import batch_align
+from .csaps import CubicSmoothSpline
 from .glog import glog
 from .loop import loop
 from .knnimpute import knnimpute
@@ -29,6 +30,7 @@ __all__ = [
     "load_dataXL",
     "batch",
     "batch_align",
+    "CubicSmoothSpline",
     "loop",
     "knnimpute",
     "peak",
